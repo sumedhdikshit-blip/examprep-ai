@@ -1,0 +1,2 @@
+This is a mock DOCX file content.
+It is treated as plain text on disk for Day 1 since we are just checking extension verification and upload mechanics.

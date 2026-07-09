@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log In - ExamPrep AI</title>
+    <meta name="description" content="Log in to your ExamPrep AI dashboard.">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="auth-wrapper">
+        <div class="auth-card">
+            <h1 class="logo">ExamPrep AI</h1>
+            <p class="subtitle">Log in to manage your study materials</p>
+            <h2>Log In</h2>
+            
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" required placeholder="john@example.com">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required placeholder="••••••••">
+                </div>
+                <button type="submit" class="btn btn-primary" id="btn-submit">Log In</button>
+            </form>
+            
+            <div class="auth-switch">
+                Don't have an account? <a href="signup.html">Sign Up</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script>
+        // Redirect if already logged in
+        if (getToken()) {
+            window.location.href = "dashboard.html";
+        }
+
+        document.getElementById("login-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById("email").value.trim();
+            const password = document.getElementById("password").value;
+            const submitBtn = document.getElementById("btn-submit");
+            
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Logging in...";
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.detail || "Authentication failed.");
+                }
+                
+                setToken(data.access_token);
+                showToast("Logged in successfully! Redirecting...", "success");
+                
+                setTimeout(() => {
+                    window.location.href = "dashboard.html";
+                }, 1000);
+            } catch (err) {
+                showToast(err.message, "error");
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Log In";
+            }
+        });
+    </script>
+</body>
+</html>

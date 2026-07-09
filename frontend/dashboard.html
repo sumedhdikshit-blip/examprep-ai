@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - ExamPrep AI</title>
+    <meta name="description" content="Manage and upload your study materials to ExamPrep AI.">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <h1 class="logo">ExamPrep AI</h1>
+            <div class="user-profile">
+                <span class="user-name" id="user-display-name">Loading...</span>
+                <button onclick="logout()" class="btn btn-secondary btn-logout">Log Out</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <h2>Your Study Materials</h2>
+        
+        <div class="dashboard-grid">
+            <!-- Upload Material Card -->
+            <div class="card">
+                <h3>Upload Material</h3>
+                <p class="subtitle" style="margin-bottom: 1.5rem;">Add study resources to generate content later.</p>
+                
+                <form id="upload-form">
+                    <div class="upload-dropzone" id="dropzone">
+                        <span class="upload-icon">📁</span>
+                        <p class="upload-text">Drag and drop file here, or click to browse</p>
+                        <p class="upload-formats">Supported: .pdf, .md, .docx, .pptx</p>
+                        <input type="file" id="file-input" class="file-input" accept=".pdf,.md,.docx,.pptx" required>
+                    </div>
+                    
+                    <!-- Selected File Display -->
+                    <div class="selected-file-container" id="selected-file-display">
+                        <span class="selected-file-name" id="selected-filename">file.pdf</span>
+                        <span class="selected-file-remove" id="btn-remove-file">&times;</span>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary" id="btn-upload" style="margin-top: 1.5rem;" disabled>
+                        Upload Document
+                    </button>
+                </form>
+            </div>
+
+            <!-- Documents List Card -->
+            <div class="card" style="padding: 1.5rem;">
+                <h3>Documents</h3>
+                <p class="subtitle" style="margin-bottom: 1.5rem;">Review your uploaded files.</p>
+                
+                <div class="table-responsive">
+                    <table id="documents-table" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Filename</th>
+                                <th>Type</th>
+                                <th>Upload Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="documents-list">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Empty State -->
+                <div class="empty-state" id="documents-empty">
+                    <span style="font-size: 2.5rem; display: block; margin-bottom: 1rem;">📭</span>
+                    <p>No documents uploaded yet. Start by uploading one on the left!</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/auth.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>

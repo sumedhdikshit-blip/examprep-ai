@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExamPrep AI</title>
+    <script>
+        // Read token from localStorage and redirect appropriately
+        const token = localStorage.getItem("examprep_jwt");
+        if (token) {
+            window.location.href = "dashboard.html";
+        } else {
+            window.location.href = "login.html";
+        }
+    </script>
+</head>
+<body>
+    <div style="font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #0b0f19; color: #f8fafc;">
+        <h3>Redirecting...</h3>
+    </div>
+</body>
+</html>
