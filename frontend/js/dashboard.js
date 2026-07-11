@@ -197,14 +197,14 @@ async function loadDocuments() {
             
             let actionBtnHtml = '';
             if (doc.status === 'uploaded' || doc.status === 'extraction_failed') {
-                actionBtnHtml = `<button class="btn btn-primary" onclick="processDocument(${doc.id})" style="padding: 0.3rem 0.8rem; font-size: 0.8rem; width: auto; margin: 0;">Process</button>`;
+                actionBtnHtml = `<button class="btn btn-primary" onclick="processDocument(${doc.id}, this)" style="padding: 0.3rem 0.8rem; font-size: 0.8rem; width: auto; margin: 0;">Process</button>`;
             } else if (doc.status === 'processing') {
                 actionBtnHtml = `<button class="btn btn-secondary" disabled style="padding: 0.3rem 0.8rem; font-size: 0.8rem; width: auto; margin: 0;">Processing...</button>`;
             } else if (doc.status === 'chunked') {
                 actionBtnHtml = `
                     <div style="display: flex; gap: 0.5rem; align-items: center;">
                         <button class="btn btn-secondary" onclick="viewChunks(${doc.id}, '${escapeJS(doc.filename)}')" style="padding: 0.3rem 0.8rem; font-size: 0.8rem; width: auto; margin: 0; background-color: var(--accent-light); color: #818cf8; border-color: var(--accent);">View Chunks</button>
-                        <button class="btn btn-secondary" onclick="processDocument(${doc.id})" style="padding: 0.3rem 0.8rem; font-size: 0.8rem; width: auto; margin: 0; opacity: 0.7;">Reprocess</button>
+                        <button class="btn btn-secondary" onclick="processDocument(${doc.id}, this)" style="padding: 0.3rem 0.8rem; font-size: 0.8rem; width: auto; margin: 0; opacity: 0.7;">Reprocess</button>
                     </div>
                 `;
             }
@@ -259,7 +259,13 @@ function escapeJS(str) {
 }
 
 // Global actions exposed to the window context for onclick handlers
-window.processDocument = async function(documentId) {
+window.processDocument = async function(documentId, btnElement) {
+    let originalHtml = "";
+    if (btnElement) {
+        btnElement.disabled = true;
+        originalHtml = btnElement.innerHTML;
+        btnElement.innerHTML = `<span class="spinner" style="display:inline-block; width:12px; height:12px; border:2px solid currentColor; border-radius:50%; border-top-color:transparent; animation:spin 0.8s linear infinite; margin-right:6px; vertical-align:middle;"></span>Processing...`;
+    }
     try {
         showToast("Processing document...", "info");
         const response = await fetch(`${API_BASE_URL}/documents/${documentId}/process`, {
@@ -274,15 +280,23 @@ window.processDocument = async function(documentId) {
             throw new Error(data.detail || "Processing failed.");
         }
         
-        if (data.status === "extraction_failed") {
-            showToast(`Extraction failed: ${data.error_message}`, "error");
+        const doc = data.document;
+        const chunksCount = data.chunks_count;
+        
+        if (doc.status === "extraction_failed") {
+            showToast(`Extraction failed: ${doc.error_message}`, "error");
         } else {
-            showToast("Document processed and chunked successfully!", "success");
+            showToast(`Document processed successfully — ${chunksCount} chunks created!`, "success");
         }
         loadDocuments();
     } catch (err) {
         showToast(err.message, "error");
         loadDocuments();
+    } finally {
+        if (btnElement) {
+            btnElement.disabled = false;
+            btnElement.innerHTML = originalHtml;
+        }
     }
 };
 

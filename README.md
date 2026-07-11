@@ -1,11 +1,24 @@
-# ExamPrep AI - Day 1 Foundation
+# ExamPrep AI - Day 2: Text Extraction & Chunking Pipeline
 
-Welcome to **ExamPrep AI** (Day 1 of 8-day build). This is a full-stack application designed to help students upload study materials and generate practice questions and solutions. 
+Welcome to **ExamPrep AI** (Day 2 of 8-day build). This is a full-stack application designed to help students upload study materials, extract text, split it into chunks, and store those chunks in the database to generate practice questions and solutions.
 
-This repository contains the Day 1 Foundation, including:
-- **Backend**: FastAPI web app with JWT authentication and file upload validations.
-- **Database**: SQLite database using SQLAlchemy ORM.
-- **Frontend**: Vanilla HTML/CSS/JS (no heavy framework) served statically by the backend.
+---
+
+## Features (Implemented so far)
+
+- **JWT Authentication**: User signup, secure login, password hashing (bcrypt), and session persistence.
+- **Multi-Format File Uploads**: Support for PDF, Markdown (`.md`), Word (`.docx`), and PowerPoint (`.pptx`) documents.
+- **Text Extraction Service**: Page-by-page clean text parsing for PDFs, slides, and Word files, with graceful error handling.
+- **Smart Chunking Pipeline**: Splits documents into ~400-600 word chunks on paragraph/sentence boundaries, mapping each chunk to its corresponding page or slide.
+- **Dynamic Dashboard UI**: Manage uploads, trigger processing, view extracted chunks in a dedicated panel, and track processing states (`UPLOADED`, `PROCESSING`, `CHUNKED`, `FAILED`).
+
+---
+
+## Tech Stack
+
+- **Backend**: FastAPI, Uvicorn, Python-docx, Python-pptx, Pdfplumber, SQLAlchemy
+- **Database**: SQLite
+- **Frontend**: Vanilla HTML5, CSS3, ES6 JavaScript (served statically by FastAPI)
 
 ---
 
@@ -16,38 +29,45 @@ This repository contains the Day 1 Foundation, including:
 ├── requirements.txt      # Pinned Python package dependencies
 ├── .env.example          # Environment template configuration
 ├── .env                  # Active environment configuration (local only)
-├── README.md             # Project documentation and setup guide
+├── README.md             # Project documentation and roadmap
 ├── backend/
-│   ├── main.py           # Application entry point & configuration
+│   ├── main.py           # Application entry point, configuration & database migrations
 │   ├── database.py       # DB engine & connection session handlers
 │   ├── config.py         # App configuration settings (Pydantic-Settings)
 │   ├── models/           # SQLAlchemy DB Models
 │   │   ├── __init__.py
 │   │   ├── base.py       # Declarative base
 │   │   ├── user.py       # User table schema
-│   │   └── document.py   # Document metadata table schema
+│   │   ├── document.py   # Document metadata table schema
+│   │   └── chunk.py      # Text chunk schema (Day 2)
 │   ├── schemas/          # Pydantic schemas (Serialization & Request Validation)
 │   │   ├── __init__.py
 │   │   ├── user.py
-│   │   └── document.py
+│   │   ├── document.py
+│   │   └── chunk.py      # Chunk response validation schema (Day 2)
 │   ├── routers/          # API Routers
 │   │   ├── __init__.py
 │   │   ├── auth.py       # /auth/signup, /auth/login, /auth/me
-│   │   └── documents.py  # /documents/upload, /documents
+│   │   └── documents.py  # Uploading, processing, and chunk retrieval
 │   ├── services/
 │   │   ├── __init__.py
-│   │   └── auth_service.py # Hashing, token creation, security dependencies
+│   │   ├── auth_service.py # Hashing, token creation, security dependencies
+│   │   ├── extraction_service.py # Parses text from .md, .pdf, .docx, and .pptx (Day 2)
+│   │   └── chunking_service.py   # Paragraph and sentence-level text chunker (Day 2)
 │   └── uploads/          # Local storage folder for uploaded study materials
+├── test_files/           # Test documents
+│   ├── generate_test_files.py # Helper script to create valid MD, DOCX, PPTX, PDF files
+│   └── sample.pdf        # Corrupt file sample
 └── frontend/             # Statically-served user interface
     ├── css/
-    │   └── style.css     # Clean modern UI style guide
+    │   └── style.css     # Clean modern UI style guide and status animations
     ├── js/
     │   ├── auth.js       # Auth helpers (tokens, cookies, redirects)
-    │   └── dashboard.js  # Dashboard UI state controller (lists, uploads)
+    │   └── dashboard.js  # Dashboard UI state controller (lists, uploads, actions, chunks)
     ├── index.html        # Entry index router
     ├── signup.html       # User signup form
     ├── login.html        # User login form
-    └── dashboard.html    # User file manager dashboard
+    └── dashboard.html    # User file manager and chunk browser dashboard
 ```
 
 ---
@@ -109,37 +129,34 @@ Open `http://127.0.0.1:8000` in your web browser. You will be automatically redi
 
 ---
 
-## Manual Verification Steps
+## Verification & Testing Steps
 
-Follow these step-by-step instructions to verify the setup:
+1. **Generate Test Files**:
+   Generate valid sample test files in `test_files/` folder (including downloading a valid PDF, creating a multi-page DOCX, and creating a multi-slide PPTX) by running:
+   ```bash
+   python test_files/generate_test_files.py
+   ```
+2. **Log In/Register**:
+   Register a new user at `http://127.0.0.1:8000/signup.html`.
+3. **Upload Files**:
+   Upload files from `test_files/` directory (`valid_sample.md`, `valid_sample.docx`, `valid_sample.pptx`, `valid_sample.pdf`, and the corrupt `sample.pdf`).
+4. **Trigger Processing**:
+   Click **Process** next to each file.
+   - The button will display a loading spinner and say "Processing...".
+   - The status of valid documents will change to `CHUNKED` and display a success toast ("Document processed successfully — X chunks created").
+   - The status of the corrupt document will change to `FAILED ⚠️`, showing the parsing error details in a tooltip.
+5. **View Chunks**:
+   Click **View Chunks** on a processed file to expand the viewer card at the bottom of the dashboard, showing the chunk indexes, approximate page locations, and text content.
 
-1. **Sign Up:**
-   - Open your browser to `http://127.0.0.1:8000` (redirects to `login.html`).
-   - Click **Sign Up** to navigate to `signup.html`.
-   - Enter your name (e.g. `Jane Doe`), email (`jane@example.com`), and a password (at least 6 characters).
-   - Click **Create Account**.
-   - Upon successful signup, you'll be logged in automatically (JWT token stored in `localStorage` as `examprep_jwt`) and redirected to `dashboard.html`.
+---
 
-2. **Log Out & Log Back In:**
-   - On the top right of the dashboard, click **Log Out**.
-   - You should see a notification, your session token will be cleared, and you'll be redirected back to `login.html`.
-   - Attempt to navigate directly to `http://127.0.0.1:8000/dashboard.html` in your browser. Verify you are automatically redirected to `login.html`.
-   - On `login.html`, log back in using your registered email (`jane@example.com`) and password. Verify you land back on `dashboard.html`.
+## Project Roadmap
 
-3. **Upload Valid Files:**
-   - On the left side of the dashboard, click inside the dashed dragzone or drag a file to select it.
-   - Select a sample `.pdf` file. Click **Upload Document**.
-   - Confirm a success notification appears, the file selection resets, and the file is added to the table list on the right.
-   - Repeat the upload process for the remaining allowed file formats:
-     - `.md` (Markdown)
-     - `.docx` (Word)
-     - `.pptx` (PowerPoint)
-   - Review the document table list. Verify that all 4 files appear correctly with their respective file type badge, upload timestamp, and status set to `UPLOADED`.
-
-4. **Verify Storage on disk:**
-   - Open the directory `/backend/uploads` inside the project folder.
-   - Verify that your uploaded files exist on the disk, prefixed by their auto-incrementing database ID (e.g. `1_sample.pdf`, `2_doc.md`).
-
-5. **Test Invalid File Rejection:**
-   - Try selecting a file with an invalid extension, such as a photo (`.jpg` or `.png`).
-   - Drag/select the file. Verify that the UI displays a clear error warning and prevents submission, or if forced, the backend API rejects the request with a clear `HTTP 400 Bad Request` detail message.
+- [x] **Day 1**: Authentication, file upload, database foundation, dashboard UI.
+- [x] **Day 2**: Text extraction (PDF/MD/Word/Slides), chunking service, database storage, and UI status interactions.
+- [ ] **Day 3**: Embeddings generation, vector database indexing (Chroma/FAISS), and RAG search pipeline.
+- [ ] **Day 4**: AI core integration, prompt engineering, and quiz generation service.
+- [ ] **Day 5**: Frontend quiz experience, interactive quiz session rendering, and scoring logic.
+- [ ] **Day 6**: Spaced repetition algorithm, review schedule system, and retention charts.
+- [ ] **Day 7**: Multi-user billing/tiers, limits enforcement, and performance optimizations.
+- [ ] **Day 8**: Final end-to-end integration, deployment guidelines, and production debugging.

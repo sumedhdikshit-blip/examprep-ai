@@ -14,3 +14,7 @@ class DocumentResponse(DocumentBase):
 
     class Config:
         from_attributes = True
+
+class DocumentProcessResponse(BaseModel):
+    document: DocumentResponse
+    chunks_count: int

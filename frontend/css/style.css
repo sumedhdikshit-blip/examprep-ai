@@ -445,3 +445,9 @@ tr:hover td {
     background-color: rgba(239, 68, 68, 0.15);
     color: var(--danger);
 }
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

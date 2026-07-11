@@ -7,7 +7,7 @@ from backend.database import get_db
 from backend.models.document import Document
 from backend.models.user import User
 from backend.models.chunk import Chunk
-from backend.schemas.document import DocumentResponse
+from backend.schemas.document import DocumentResponse, DocumentProcessResponse
 from backend.schemas.chunk import ChunkResponse
 from backend.services.auth_service import get_current_user
 from backend.services.extraction_service import extract_text
@@ -89,7 +89,7 @@ def list_documents(
     documents = db.query(Document).filter(Document.user_id == current_user.id).all()
     return documents
 
-@router.post("/{document_id}/process", response_model=DocumentResponse)
+@router.post("/{document_id}/process", response_model=DocumentProcessResponse)
 def process_document(
     document_id: int,
     current_user: User = Depends(get_current_user),
@@ -136,6 +136,7 @@ def process_document(
         doc.status = "chunked"
         db.commit()
         db.refresh(doc)
+        return {"document": doc, "chunks_count": len(chunks)}
     except Exception as e:
         db.rollback()
         # Update status to 'extraction_failed' and log the error message
@@ -143,8 +144,7 @@ def process_document(
         doc.error_message = str(e)
         db.commit()
         db.refresh(doc)
-        
-    return doc
+        return {"document": doc, "chunks_count": 0}
 
 @router.get("/{document_id}/chunks", response_model=list[ChunkResponse])
 def get_document_chunks(
