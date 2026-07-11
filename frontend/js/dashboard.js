@@ -121,6 +121,11 @@ document.addEventListener("DOMContentLoaded", () => {
             btnUpload.disabled = !fileInput.files[0];
         }
     });
+
+    // 8. Close chunks viewer event listener
+    document.getElementById("btn-close-chunks").addEventListener("click", () => {
+        window.closeChunksViewer();
+    });
 });
 
 /**
@@ -190,11 +195,37 @@ async function loadDocuments() {
             // Format date nicely
             const uploadDate = new Date(doc.upload_date).toLocaleString();
             
+            let actionBtnHtml = '';
+            if (doc.status === 'uploaded' || doc.status === 'extraction_failed') {
+                actionBtnHtml = `<button class="btn btn-primary" onclick="processDocument(${doc.id})" style="padding: 0.3rem 0.8rem; font-size: 0.8rem; width: auto; margin: 0;">Process</button>`;
+            } else if (doc.status === 'processing') {
+                actionBtnHtml = `<button class="btn btn-secondary" disabled style="padding: 0.3rem 0.8rem; font-size: 0.8rem; width: auto; margin: 0;">Processing...</button>`;
+            } else if (doc.status === 'chunked') {
+                actionBtnHtml = `
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button class="btn btn-secondary" onclick="viewChunks(${doc.id}, '${escapeJS(doc.filename)}')" style="padding: 0.3rem 0.8rem; font-size: 0.8rem; width: auto; margin: 0; background-color: var(--accent-light); color: #818cf8; border-color: var(--accent);">View Chunks</button>
+                        <button class="btn btn-secondary" onclick="processDocument(${doc.id})" style="padding: 0.3rem 0.8rem; font-size: 0.8rem; width: auto; margin: 0; opacity: 0.7;">Reprocess</button>
+                    </div>
+                `;
+            }
+
+            // Status badges
+            let badgeClass = 'badge-uploaded';
+            if (doc.status === 'chunked') badgeClass = 'badge-chunked';
+            if (doc.status === 'processing') badgeClass = 'badge-processing';
+            if (doc.status === 'extraction_failed') badgeClass = 'badge-failed';
+            
+            let statusText = escapeHTML(doc.status.toUpperCase());
+            if (doc.status === 'extraction_failed' && doc.error_message) {
+                statusText = `<span title="${escapeHTML(doc.error_message)}">FAILED ⚠️</span>`;
+            }
+            
             row.innerHTML = `
                 <td style="font-weight: 500;">${escapeHTML(doc.filename)}</td>
                 <td><span class="badge badge-${doc.file_type}">${doc.file_type.toUpperCase()}</span></td>
                 <td style="color: var(--text-secondary);">${uploadDate}</td>
-                <td><span class="badge badge-uploaded">${escapeHTML(doc.status)}</span></td>
+                <td><span class="badge ${badgeClass}">${statusText}</span></td>
+                <td>${actionBtnHtml}</td>
             `;
             
             list.appendChild(row);
@@ -219,3 +250,99 @@ function escapeHTML(str) {
         }[tag] || tag)
     );
 }
+
+/**
+ * Escape single and double quotes for safe JS string interpolation
+ */
+function escapeJS(str) {
+    return str.replace(/'/g, "\\'").replace(/"/g, '\\"');
+}
+
+// Global actions exposed to the window context for onclick handlers
+window.processDocument = async function(documentId) {
+    try {
+        showToast("Processing document...", "info");
+        const response = await fetch(`${API_BASE_URL}/documents/${documentId}/process`, {
+            method: "POST",
+            headers: {
+                ...getAuthHeaders()
+            }
+        });
+        
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.detail || "Processing failed.");
+        }
+        
+        if (data.status === "extraction_failed") {
+            showToast(`Extraction failed: ${data.error_message}`, "error");
+        } else {
+            showToast("Document processed and chunked successfully!", "success");
+        }
+        loadDocuments();
+    } catch (err) {
+        showToast(err.message, "error");
+        loadDocuments();
+    }
+};
+
+window.viewChunks = async function(documentId, filename) {
+    const viewer = document.getElementById("chunks-viewer");
+    const container = document.getElementById("chunks-list-container");
+    const subtitle = document.getElementById("chunks-subtitle");
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/documents/${documentId}/chunks`, {
+            headers: {
+                ...getAuthHeaders()
+            }
+        });
+        
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.detail || "Failed to fetch chunks.");
+        }
+        
+        const chunks = await response.json();
+        
+        container.innerHTML = "";
+        subtitle.innerText = `Viewing chunks for "${filename}" (${chunks.length} chunks found)`;
+        viewer.style.display = "block";
+        
+        if (chunks.length === 0) {
+            container.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 2rem;">No chunks generated for this document yet. Try processing it again.</div>`;
+            return;
+        }
+        
+        chunks.forEach(chunk => {
+            const chunkDiv = document.createElement("div");
+            chunkDiv.style.backgroundColor = "var(--bg-primary)";
+            chunkDiv.style.border = "1px solid var(--border)";
+            chunkDiv.style.borderRadius = "var(--radius-sm)";
+            chunkDiv.style.padding = "1rem";
+            chunkDiv.style.display = "flex";
+            chunkDiv.style.flexDirection = "column";
+            chunkDiv.style.gap = "0.5rem";
+            
+            const pageInfo = chunk.page_number !== null ? `Page / Slide ${chunk.page_number}` : 'N/A';
+            
+            chunkDiv.innerHTML = `
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; font-size: 0.8rem; color: var(--text-secondary);">
+                    <span><strong>Chunk Index:</strong> ${chunk.chunk_index}</span>
+                    <span><strong>Location:</strong> ${pageInfo}</span>
+                </div>
+                <div style="font-size: 0.9rem; color: var(--text-primary); white-space: pre-wrap; font-family: monospace; max-height: 150px; overflow-y: auto; padding-top: 0.25rem;">${escapeHTML(chunk.chunk_text)}</div>
+            `;
+            container.appendChild(chunkDiv);
+        });
+        
+        // Scroll viewer into view smoothly
+        viewer.scrollIntoView({ behavior: 'smooth' });
+    } catch (err) {
+        showToast(err.message, "error");
+    }
+};
+
+window.closeChunksViewer = function() {
+    document.getElementById("chunks-viewer").style.display = "none";
+};

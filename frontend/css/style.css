@@ -432,3 +432,16 @@ tr:hover td {
         opacity: 1;
     }
 }
+
+.badge-chunked {
+    background-color: rgba(16, 185, 129, 0.15);
+    color: var(--success);
+}
+.badge-processing {
+    background-color: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+}
+.badge-failed {
+    background-color: rgba(239, 68, 68, 0.15);
+    color: var(--danger);
+}

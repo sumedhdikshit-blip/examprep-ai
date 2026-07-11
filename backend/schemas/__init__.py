@@ -1,5 +1,6 @@
 from backend.schemas.user import UserBase, UserCreate, UserLogin, UserResponse, Token, TokenData
 from backend.schemas.document import DocumentBase, DocumentResponse
+from backend.schemas.chunk import ChunkResponse
 
 __all__ = [
     "UserBase",
@@ -9,5 +10,6 @@ __all__ = [
     "Token",
     "TokenData",
     "DocumentBase",
-    "DocumentResponse"
+    "DocumentResponse",
+    "ChunkResponse"
 ]
